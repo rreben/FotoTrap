@@ -1,4 +1,4 @@
-# FotoTrap - an open hardware foto FotoTrap
+# FotoTrap - an open hardware foto trap
 
 FotoTrap is an open source / open hardware project to build a high speed fotography trigger and a foto trap to take fotos of animals in the wild.
 
@@ -6,7 +6,8 @@ FotoTrap is an open source / open hardware project to build a high speed fotogra
 
 ### Preparation
 1. Connect you room light to the relais. Do this in such a way that the light is turned off, when the relais is pulled up.
-2. Connect your flash to the pc cable.
+2. Connect your flash to the pc cable. If there is no connector for the pc sync cable, use a horse shoe adapter.
+Make sure to connect the flash correctly to the horse shoe adapter. The front side of the flash must be headed to the closed side of the horse shoe adapter (like mounting the flash from the rear end of your camera).
 3. Connect your camera to the trigger cable (stereo jack).
 4. Connect the FotoTrap to a power supply. Either connect a 9V battery to Gnd and Vin of the Arduino on the Bread Board or, connect the Arduino to an USB power supply.
 5. Turn on your flash, choose the lowest flash energy possible (this will result in the shortest exposure time).
@@ -62,7 +63,7 @@ The pins in the trigger cables need to be shortcutted in order to trigger the fl
 
 1. Arduino nano with an ATmega328. I bought this on [Amazon](https://smile.amazon.de/gp/product/B078SBBST6/ref=ppx_yo_dt_b_asin_title_o08_s01?ie=UTF8&psc=1). Order a couple of these, they are cheap, and you might damage some during setup. There is an excellent Tutoria on how to solder the pins to the Arduino nano on [youtube](https://www.youtube.com/watch?v=wDbUChzxIrE).
 
-![Arduion](images/arduino.png)
+![Arduino](images/arduino.png)
 2. A microphone module like the youmile detecor module, which can be purchased on [Amazon](https://smile.amazon.de/gp/product/B07Q1BYDS7/ref=ppx_yo_dt_b_asin_title_o07_s00?ie=UTF8&psc=1). The microphone is connected to the breadboard to provide Vin (5V+) and GND. The signal is provided by the OUT Pin, it is directly connected to a digital-read-pin on the Arduino. There are two green LED on the microphone controller. The first LED is on when the micorophone is connected to power, the second LED is flushed when a sound is detectd. The sensitivity can be adjusted with the trimmer / potentiometer. ATTENTION: The signal goes to LOW when a sound is detected. ![microphone](images/microphone.png).
 3. The infrared motion detector. I use a module from AZDelivery on [Amazon](https://smile.amazon.de/gp/product/B07CNBYRQ7/ref=ppx_yo_dt_b_asin_title_o08_s01?ie=UTF8&psc=1). The semispherical cap can be removed, then you see the printing of the lables of pins (again Vin, GND and OUT). On the module there is a jumper bridge and two trimmers. The jumper should be set to the edge of the board, then the circuit is in binary detection mode. The two potentiometers set sensitivity and a timer for the detection interval. We will not need the latter, because we will time the detection interval on the Arduino
 
@@ -84,6 +85,19 @@ The pins in the trigger cables need to be shortcutted in order to trigger the fl
 
 7. A micro button in DIP packaging to be installed directly on the breadboard (for testing purposes).
 
-8. Several resistors.
+8. Several resistors. Use a [color code calculatur](https://www.digikey.de/en/resources/conversion-calculators/conversion-calculator-resistor-color-code). To find the right resistors.
+3x 240 &Omega; for the pull up buttons. 3x 560 &Omega; for the opto couplers. 1x 100 &Omega; for the red LED.
 
-9. A green and a red button.
+9. A green and a red button, e.g. from [Amazon](https://www.amazon.de/gp/product/B077FH7TGD/ref=ppx_yo_dt_b_asin_title_o08_s00?ie=UTF8&psc=1)
+
+![Button](images/button.png)
+
+10. A horse shoe flash adapter from [Amazon](https://www.amazon.de/gp/product/B005GR28MK/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1)
+
+![horseshoe](images/horseshoe.png)
+
+### Circuit
+
+Find the Fritzing file in this project.
+
+![circuit](images/circuit.png)

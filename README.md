@@ -101,3 +101,365 @@ The pins in the trigger cables need to be shortcutted in order to trigger the fl
 Find the Fritzing file in this project.
 
 ![circuit](images/circuit.png)
+
+Yellow cable mark actors (to the relay, to the opto couplers for triggering flash and shutter of the camera). Orange cables mark detectors (from the buttons and from the microphone and motion sensor). Blue cables are GND, red cables are VC +5V.
+
+If we set PIN 1 of a PC817 to HIGH then PIN 3 and 4 will be shortcutted. We use one PC817 for each of the following functions:
+
+1. Shorcut the connections in the PC sync cable, this will trigger the flash. The connection to the flash is shown as a female 2 pole connector in the schematic.
+2. Shortcut the base and the middle of a stereo 2.5 mm radio jacl cable. This will trigger the autofocus of the camera.
+3. Shortcut the base and the tip of the stereo radio jack cable. This will trigger the shutter of the cable.
+
+The connection to the radio jack cable is shown as a three pole male connector.
+
+There is an excellent description on how to do a remote control of a camera onn [doc-diy.com](https://www.doc-diy.net/photo/remote_pinout/).
+
+![How to trigger a camera](images/camera_radio_jack.png)
+
+I built the FotoTrap for a Fuji VT100, if you have a different camera, you should check out the above source.
+
+In the cable that I have the yellow cable is base / ground, the red cable is connected to the middle section and the white cable is connected to the tip of the radio jack.
+
+The last function is a connection of a relay. This can be used to turn off the light for a high speed fotography. (Also turn the light back on after the foto has been taken).
+
+On the active side there is a red LED used for status indication. Also we can use the builtin LED on PIN 13 for testing purposes. So this PIN has not been used intentionally.
+
+There are three pull up buttons, two external buttons (in the front panel of the housing) and one button on the breadboard, that is used for testing purposes.
+
+We have the two sensors (microphone and motion sensor) in a digital configuration (they either are LOW or HIGH) and are also connected to digital PINs of the Arduino.
+
+### Programming
+
+Here is the complete program:
+
+```java
+/*
+  FotoTool
+  There are two major modes:
+  1. High speed fotography: When the microphone detects a sound the flash is triggered
+  2. Foto trap: When the PIR detects a motion the autofocus is triggered and then the shutter is triggered
+
+  In each major mode there are two submodes. The tool can be inactive, or waiting for motion (or sound respectively)
+
+ */
+
+
+int flash = 2;        // when high the opto coupler shortcuts the pc cable
+int shutter = 3;      // when high the opto coupler shortcuts the base and the tip from the "klinke", this triggers the shutter
+int autofocus = 4;    // when high the opto coupler shortcuts the base and the middle from the "klinke", this starts auto focus
+int pir = 5;          // this gets high when a motion is detected
+int button = 6;       // internal pull up button for testing purposes
+int microphone = 7;   // gets LOW (1) when sound is detected
+int relais = 8;       // high pulls the relais
+int externalLED = 10; // when high the LED on the front panes is on
+int externalRedButton = 11;    // pull up button
+int externalGreenButton = 12;  // pull up button
+int buildInLED = 13;  
+
+int fotoTrapMode = 0; // is 1 when in fototrap mode
+int highSpeedMode = 0;// is 1 when in high speed fotography mode
+
+int fotoTrapSubMode = 0; // is 0 when inactive, is 1 when waiting for motion
+int externalRedButtonValue = 0;        // Red button triggers foto trap mode
+int externalRedButtonOldValue = 0;
+
+int highSpeedSubMode = 0; // is 0 when inactive, is 1 when waiting for sound
+int externalGreenButtonValue = 0;      // Green button triggers high speed mode
+int externalGreenButtonOldValue = 0;
+
+int soundDetected = 0;
+int motionDetected = 0;
+
+// the setup routine runs once when you press reset:
+void setup() {                
+  // initialize the digital pin as an output.
+  pinMode(buildInLED, OUTPUT);  
+  pinMode(externalLED, OUTPUT);
+  pinMode(flash, OUTPUT);
+  pinMode(shutter, OUTPUT);
+  pinMode(autofocus, OUTPUT);
+  pinMode(relais, OUTPUT);  
+  pinMode(pir, INPUT);
+  pinMode(microphone, INPUT);
+  pinMode(button, INPUT);
+  pinMode(externalRedButton, INPUT);
+  pinMode(externalGreenButton, INPUT);
+}
+
+// the loop routine runs over and over again forever:
+void loop() {
+  externalRedButtonValue = digitalRead(externalRedButton);
+  if ((externalRedButtonValue == HIGH) && (externalRedButtonOldValue == LOW)){
+    fotoTrapMode = 1;
+    highSpeedMode = 0;
+    fotoTrapSubMode = 1 -fotoTrapSubMode;
+    delay(10);
+  }
+  externalRedButtonOldValue = externalRedButtonValue;
+  if (fotoTrapMode == 1){
+    if (fotoTrapSubMode == 1){
+      digitalWrite(buildInLED, HIGH);
+      digitalWrite(externalLED, HIGH);
+      motionDetected = digitalRead(pir);
+      if (motionDetected == HIGH){
+        digitalWrite(autofocus, HIGH); // trigger autofocus
+        delay(500);                    // the camera needs some time to trigger the autofocus
+        digitalWrite(autofocus, LOW);
+        delay(500);                    // wait some time before ..
+        digitalWrite(shutter, HIGH);   // triggering the shutter
+        delay(500);                    // camera needs a long pulse to trigger the shutter
+        digitalWrite(shutter, LOW);
+        motionDetected = 0;
+        // blink external LED and wait some time before detecting motion again
+        digitalWrite(externalLED, LOW);
+        delay(1000);
+        digitalWrite(externalLED, HIGH);
+        delay(1000);
+        digitalWrite(externalLED, LOW);
+        delay(1000);
+        digitalWrite(externalLED, HIGH);
+        delay(1000);
+        digitalWrite(externalLED, LOW);
+        delay(1000);
+        digitalWrite(externalLED, HIGH);
+        delay(1000);
+      }
+    }else{
+      digitalWrite(buildInLED, LOW);
+      digitalWrite(externalLED, LOW);
+    }  
+  }
+  externalGreenButtonValue = digitalRead(externalGreenButton);
+  if ((externalGreenButtonValue == HIGH) && (externalGreenButtonOldValue == LOW)){
+    fotoTrapMode = 0;
+    highSpeedMode = 1;
+    highSpeedSubMode = 1;
+    delay(10);
+    digitalWrite(buildInLED, HIGH);   // We do this for testing purposes, e.g. calibrating the mic via potentiometer
+    digitalWrite(relais, HIGH);       // pull the relais to shut a lamp of and darken the room
+    digitalWrite(shutter, HIGH);      // we now open the shutter we do this before listening, because the relais or shutter sound
+                                      // might trigger the flash
+    // fast blink external LED and wait some time before detecting motion again
+    digitalWrite(externalLED, LOW);
+    delay(500);
+    digitalWrite(externalLED, HIGH);
+    delay(500);
+    digitalWrite(externalLED, LOW);
+    delay(500);
+    digitalWrite(externalLED, HIGH);
+    delay(500);
+    digitalWrite(externalLED, LOW);
+    delay(500);
+    digitalWrite(externalLED, HIGH);
+    delay(500);
+    digitalWrite(externalLED, LOW);   // end with low, so that the LED does not radiate light when shutter is open
+  }
+  externalGreenButtonOldValue = externalGreenButtonValue;
+  if (highSpeedMode == 1){
+    if (highSpeedSubMode == 1){
+      soundDetected = digitalRead(microphone);
+      if (soundDetected == LOW){
+        digitalWrite(flash, HIGH);        // trigger flash
+        delay(5);                         // some time for the flash to be triggered
+        digitalWrite(flash, LOW);         // let the flash reload
+        digitalWrite(shutter, LOW);       // close shutter
+        digitalWrite(relais, LOW);        // turn light back on
+        digitalWrite(buildInLED, LOW);
+        highSpeedSubMode = 0;
+      }
+    }
+  }
+}
+```
+
+You find the program as a processing file in this project.
+
+I recommend, that you build the sketch and the circuit in small steps. A first step could be to trigger the blinking of the buildInLED and the relay by the button.
+
+```java
+/*
+  TestButtonAndRelais
+  There are two modes:
+  a) do nothing
+  b) blink the built in LED for a second (and off a second) and at the same time activate the relais in a blinking mode
+  Push the pull-up-button to change between these modes
+
+ */
+
+// Pin 13 has an LED connected on most Arduino boards.
+// give it a name:
+int buildInLED = 13;
+int relais = 8;
+int button = 6;
+int mode = 0;
+int buttonValue = 0;
+int buttonOldValue = 0;
+
+// the setup routine runs once when you press reset:
+void setup() {                
+  // initialize the digital pin as an output.
+  pinMode(buildInLED, OUTPUT);  
+  pinMode(relais, OUTPUT);  
+  pinMode(button, INPUT);
+}
+
+// the loop routine runs over and over again forever:
+void loop() {
+  buttonValue = digitalRead(button);
+  if ((buttonValue == HIGH) && (buttonOldValue == LOW)){
+    mode = 1 - mode;
+    delay(10);
+  }
+  buttonOldValue = buttonValue;
+  if (mode == 1){
+    digitalWrite(buildInLED, HIGH);   // turn the LED on (HIGH is the voltage level)
+    digitalWrite(relais, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(1000);               // wait for a second
+    digitalWrite(buildInLED, LOW);    // turn the LED off by making the voltage LOW
+    digitalWrite(relais, LOW);    // turn the LED off by making the voltage LOW
+    delay(1000);               // wait for a second
+  }
+}
+```
+
+A next step might be to focus on the high speed fotography part:
+
+```java
+/*
+  HighSpeedFoto
+  There are two modes:
+  a) Be inactive
+  b) 1. Pull the relais
+     2. open the shutter
+     3. listen for sound
+        3-1. When there is a sound trigger the flash
+        3-2. shut the shutter
+        3-3. release the relais
+        3-4. switch back to inactive mode
+  Push the pull-up-button starts the active mode
+
+ */
+
+
+int buildInLED = 13;
+int relais = 8;
+int button = 6;
+int microphone = 7;
+int flash = 2;
+int shutter = 3;
+
+int mode = 0;
+int buttonValue = 0;
+int buttonOldValue = 0;
+
+int soundDetected = 0;
+
+// the setup routine runs once when you press reset:
+void setup() {                
+  // initialize the digital pin as an output.
+  pinMode(buildInLED, OUTPUT);  
+  pinMode(relais, OUTPUT);  
+  pinMode(button, INPUT);
+  pinMode(microphone, INPUT);
+  pinMode(flash, OUTPUT);
+  pinMode(shutter, OUTPUT);
+}
+
+// the loop routine runs over and over again forever:
+void loop() {
+  buttonValue = digitalRead(button);
+  if ((buttonValue == HIGH) && (buttonOldValue == LOW)){
+    mode = 1;
+    delay(10);
+    digitalWrite(buildInLED, HIGH);   // turn the LED on (HIGH is the voltage level)
+    digitalWrite(relais, HIGH);   // turn the LED on (HIGH is the voltage level)
+    digitalWrite(shutter, HIGH);
+    delay(5000);
+  }
+  buttonOldValue = buttonValue;
+  if (mode == 1){
+    soundDetected = digitalRead(microphone);
+    if (soundDetected == LOW){
+      digitalWrite(flash, HIGH);
+      delay(5);
+      digitalWrite(flash, LOW);
+      digitalWrite(shutter, LOW);
+      digitalWrite(relais, LOW);
+      digitalWrite(buildInLED, LOW);
+      mode = 0;
+    }
+  }
+}
+```
+
+
+After this you might want to focus on the motion foto trap mode:
+
+```java
+/*
+  Motion Detecion
+  There are two modes:
+  a) Be inactive
+  b) Wait for movement
+        b-1. When there is a sound trigger the autofocus
+        b-2. take a photo
+        b-3. wait for 5 s
+  Push the pull-up-button switches between active and inactive mode
+
+ */
+
+
+int buildInLED = 13;
+int relais = 8;
+int button = 6;
+int microphone = 7;
+int flash = 2;
+int shutter = 3;
+int pir = 5;
+int autofocus = 4;
+
+int mode = 0;
+int buttonValue = 0;
+int buttonOldValue = 0;
+
+int soundDetected = 0;
+int motionDetected = 0;
+
+// the setup routine runs once when you press reset:
+void setup() {                
+  // initialize the digital pin as an output.
+  pinMode(buildInLED, OUTPUT);  
+  pinMode(relais, OUTPUT);  
+  pinMode(button, INPUT);
+  pinMode(microphone, INPUT);
+  pinMode(flash, OUTPUT);
+  pinMode(shutter, OUTPUT);
+  pinMode(autofocus, OUTPUT);
+}
+
+// the loop routine runs over and over again forever:
+void loop() {
+  buttonValue = digitalRead(button);
+  if ((buttonValue == HIGH) && (buttonOldValue == LOW)){
+    mode = 1 -mode;
+    delay(10);
+  }
+  buttonOldValue = buttonValue;
+  if (mode == 1){
+    digitalWrite(buildInLED, HIGH);
+    motionDetected = digitalRead(pir);
+    if (motionDetected == HIGH){
+      digitalWrite(autofocus, HIGH);
+      delay(500);
+      digitalWrite(autofocus, LOW);
+      digitalWrite(shutter, HIGH);
+      delay(500);
+      digitalWrite(shutter, LOW);
+      motionDetected = 0;
+      delay(5000);
+    }
+  }else{
+    digitalWrite(buildInLED, LOW);
+  }  
+}
+```

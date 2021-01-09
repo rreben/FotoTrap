@@ -463,3 +463,12 @@ void loop() {
   }  
 }
 ```
+
+## Ressources
+
+There are some excellent ressources freely available that I have used for this project.
+
+1. First and foremost there is a very good youtube video together with a circuit and code for the highspeed fotography part by [Matt Richardson](https://www.youtube.com/watch?v=R8_dAgaBBdI). Also see his blog for [further information](http://mattrichardson.com/Arduino-Photo-Trigger/).
+2. [Elbebilder.de](http://technik.elbebilder.de/2012/12/03/kamera-mit-arduino-fernsteuern/) gives information on how to connect an opto coupler and how to do a remote trigger for the camera from an arduino.
+3. [Ned Kelly](https://www.youtube.com/watch?v=BT6AAbIV69g) shows how to trigger a camera with a headphone and how to remotely trigger autofocus.
+4. [doc-diy.net](https://www.doc-diy.net/photo/remote_pinout/) gives detailed information about the various types of remotely triggering a camera.
